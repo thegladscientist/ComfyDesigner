@@ -1,19 +1,20 @@
+
 import json
 import os
 
 def generate_input_name(index, input_type):
-    return f"In{index}({input_type})"
+    return "In{}({})".format(index, input_type)
 
 def create_dynamic_node():
     # Get the path to the directory where this script is located
     script_dir = os.path.dirname(__file__)
-    configJSON = os.path.join(script_dir, 'dynamic_config.json')
+    configJSON = os.path.join(script_dir, 'TOP_flip_config.json')
     
     # Load the configuration from the JSON file
     with open(configJSON, "r") as config_file:
         config = json.load(config_file)
 
-    class DynamicNode:
+    class TOP_flip:
         @classmethod
         def INPUT_TYPES(cls):
             inputs = config["input_types"]
@@ -34,10 +35,10 @@ def create_dynamic_node():
 
         def node_function(self, **inputs):
             # Example logic that uses dynamic inputs
-            output = f"Processed inputs: {inputs}"
+            output = "Processed inputs: {}".format(inputs)
             return (output,)
 
-    return DynamicNode
+    return TOP_flip
 
 # Create an instance of the dynamic node
-DynamicNode = create_dynamic_node()
+TOP_flip = create_dynamic_node()

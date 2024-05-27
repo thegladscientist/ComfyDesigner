@@ -1,12 +1,14 @@
 import numpy as np
 import touchpy as tp
 import json
+import os
 
 class ExampleRunComp:
-    def __init__(self):
+    def __init__(self, tox_path):
         self.inputs = []
         self.outputs = []
         self.parameters = []
+        self.tox_path = tox_path
 
     @staticmethod
     def on_layout_change(comp, this):
@@ -38,10 +40,16 @@ class ExampleRunComp:
             par_type = type(par_value).__name__
             this.parameters.append((par, par_type, par_value))
 
-        generate_json_config(this.inputs, this.outputs, this.parameters, 'dynamic_config-flip.json')
+        tox_name = os.path.splitext(os.path.basename(this.tox_path))[0]
+        config_filename = f'{tox_name}_config.json'
+        dynamic_node_filename = f'{tox_name}_node.py'
 
-    def runComp(self, tox_path):
-        comp = tp.Comp(tox_path)
+        generate_json_config(this.inputs, this.outputs, this.parameters, config_filename)
+        generate_dynamic_node(dynamic_node_filename, config_filename, tox_name)
+        update_init_file(tox_name)
+
+    def runComp(self):
+        comp = tp.Comp(self.tox_path)
 
         comp.set_on_layout_change_callback(self.on_layout_change, self)
 
@@ -57,27 +65,16 @@ def convert_type(touch_type):
     }
     return type_mapping.get(touch_type, "UNKNOWN")
 
-# Function to convert parameter Python types to ComfyUI types
-def convert_param_type(param_type):
-    param_type_mapping = {
-        "int": "INT",
-        "float": "FLOAT",
-        "str": "STRING",
-        "bool": "BOOLEAN",
-        # Add more mappings if needed
-    }
-    return param_type_mapping.get(param_type, "UNKNOWN")
-
 # Function to generate JSON config
 def generate_json_config(inputs, outputs, parameters, output_json_path):
     config = {
         "input_types": {
             "required": {
-                f"In{index + 1}({convert_type(input_type)})": [convert_type(input_type), {"default": None}]
+                "In{}({})".format(index + 1, convert_type(input_type)): [convert_type(input_type), {"default": None}]
                 for index, (name, input_type) in enumerate(inputs)
             },
             "optional": {
-                f"{par}({convert_param_type(par_type)})": [convert_param_type(par_type), {"default": default_value}]
+                "{}({})".format(par, par_type): [par_type, {"default": default_value}]
                 for par, par_type, default_value in parameters
             }
         },
@@ -87,7 +84,102 @@ def generate_json_config(inputs, outputs, parameters, output_json_path):
     with open(output_json_path, "w") as config_file:
         json.dump(config, config_file, indent=4)
 
+# Function to add new dynamic node to the init file to be loaded as a custom node
+def update_init_file(tox_name):
+    init_path = os.path.join(os.path.dirname(__file__), '__init__.py')
+    
+    # Read the current contents of the init file
+    with open(init_path, "r") as init_file:
+        lines = init_file.readlines()
+
+    # Prepare the new import and mapping lines
+    import_line = "from .{}_node import {}\n".format(tox_name, tox_name)
+    class_mapping_line = '    "{}": {},\n'.format(tox_name, tox_name)
+    display_name_mapping_line = '    "{}": "{} Node",\n'.format(tox_name, tox_name)
+
+    # Insert the import line at the top, after the initial imports
+    for i, line in enumerate(lines):
+        if not line.startswith("from") and not line.startswith("import"):
+            lines.insert(i, import_line)
+            break
+
+    # Find the positions to insert the new mappings
+    class_mapping_index = None
+    display_name_mapping_index = None
+
+    for i, line in enumerate(lines):
+        if line.strip() == "NODE_CLASS_MAPPINGS = {":
+            class_mapping_index = i + 1
+        elif line.strip() == "NODE_DISPLAY_NAME_MAPPINGS = {":
+            display_name_mapping_index = i + 2
+
+    # Insert the new mappings in the appropriate places
+    if class_mapping_index is not None:
+        lines.insert(class_mapping_index, class_mapping_line)
+    
+    if display_name_mapping_index is not None:
+        lines.insert(display_name_mapping_index, display_name_mapping_line)
+
+    # Write the updated contents back to the init file
+    with open(init_path, "w") as init_file:
+        init_file.writelines(lines)
+
+# Function to generate dynamic node Python file
+def generate_dynamic_node(filename, config_filename, class_name):
+    node_code = """
+import json
+import os
+
+def generate_input_name(index, input_type):
+    return "In{{}}({{}})".format(index, input_type)
+
+def create_dynamic_node():
+    # Get the path to the directory where this script is located
+    script_dir = os.path.dirname(__file__)
+    configJSON = os.path.join(script_dir, '{}')
+    
+    # Load the configuration from the JSON file
+    with open(configJSON, "r") as config_file:
+        config = json.load(config_file)
+
+    class {}:
+        @classmethod
+        def INPUT_TYPES(cls):
+            inputs = config["input_types"]
+            parsed_inputs = {{"required": {{}}, "optional": {{}}}}
+            for index, (key, value) in enumerate(inputs["required"].items(), start=1):
+                input_type, properties = value
+                input_name = generate_input_name(index, input_type)
+                parsed_inputs["required"][input_name] = (input_type, properties)
+            
+            for key, value in inputs.get("optional", {{}}).items():
+                input_type, properties = value
+                parsed_inputs["optional"][key] = (input_type, properties)
+                
+            return parsed_inputs
+
+        RETURN_TYPES = tuple(config["output_types"])
+        FUNCTION = "node_function"
+
+        def node_function(self, **inputs):
+            # Example logic that uses dynamic inputs
+            output = "Processed inputs: {{}}".format(inputs)
+            return (output,)
+
+    return {}
+
+# Create an instance of the dynamic node
+{} = create_dynamic_node()
+""".format(config_filename, class_name, class_name, class_name)
+
+    with open(filename, "w") as node_file:
+        node_file.write(node_code)
+
 # Main execution
 if __name__ == "__main__":
-    example = ExampleRunComp()
-    example.runComp('TOP_flip.tox')
+    # IMPORTANT
+    ORIGINAL_TOX_NAME = 'TOP_flip'  # Update me for each TOX to extract from
+    # IMPORTANT
+    tox_path = ORIGINAL_TOX_NAME + '.tox'
+    example = ExampleRunComp(tox_path)
+    example.runComp()

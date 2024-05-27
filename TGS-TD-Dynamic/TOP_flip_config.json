@@ -1,0 +1,38 @@
+{
+    "input_types": {
+        "required": {
+            "In1(IMAGE)": [
+                "IMAGE",
+                {
+                    "default": null
+                }
+            ]
+        },
+        "optional": {
+            "Flipx(bool)": [
+                "bool",
+                {
+                    "default": false,
+                    "widget": true
+                }
+            ],
+            "Flipy(bool)": [
+                "bool",
+                {
+                    "default": false,
+                    "widget": true
+                }
+            ],
+            "Flop(int)": [
+                "int",
+                {
+                    "default": 0,
+                    "widget": true
+                }
+            ]
+        }
+    },
+    "output_types": [
+        "IMAGE"
+    ]
+}

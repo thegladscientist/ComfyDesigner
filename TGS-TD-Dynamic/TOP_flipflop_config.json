@@ -9,20 +9,20 @@
             ]
         },
         "optional": {
-            "Flipx(BOOLEAN)": [
-                "BOOLEAN",
+            "Flipx(bool)": [
+                "bool",
                 {
                     "default": false
                 }
             ],
-            "Flipy(BOOLEAN)": [
-                "BOOLEAN",
+            "Flipy(bool)": [
+                "bool",
                 {
                     "default": false
                 }
             ],
-            "Flop(INT)": [
-                "INT",
+            "Flop(int)": [
+                "int",
                 {
                     "default": 0
                 }

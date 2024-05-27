@@ -1,0 +1,35 @@
+{
+    "input_types": {
+        "required": {
+            "In1(IMAGE)": [
+                "IMAGE",
+                {
+                    "default": null
+                }
+            ]
+        },
+        "optional": {
+            "Flipx(BOOLEAN)": [
+                "BOOLEAN",
+                {
+                    "default": false
+                }
+            ],
+            "Flipy(BOOLEAN)": [
+                "BOOLEAN",
+                {
+                    "default": false
+                }
+            ],
+            "Flop(INT)": [
+                "INT",
+                {
+                    "default": 0
+                }
+            ]
+        }
+    },
+    "output_types": [
+        "IMAGE"
+    ]
+}

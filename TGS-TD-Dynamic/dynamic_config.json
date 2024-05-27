@@ -1,0 +1,10 @@
+{
+    "input_types": {
+        "required": {
+            "dynamic_input1": ["STRING", {"default": "", "widget": true}],
+            "dynamic_input2": ["BOOLEAN", {"default": true, "widget": true}],
+            "dynamic_input3": ["INT", {"default": 0, "widget": false}]
+        }
+    },
+    "output_types": ["STRING"]
+}
